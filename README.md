@@ -1,5 +1,4 @@
-ynab_it
-=======
+# YnabIt
 
 DirectConnect-y for YNAB
 
@@ -13,3 +12,24 @@ YNAB (http://www.youneedabudget.com/) is great budgeting software.   However, by
    
 
 ynab_it uses Intuit's Customer Account Data API to aggregate financial institution accounts (banking, mortgage, credit cards, investments) transactions on disk and massages them into a format that YNAB can later ingest.  So yes, there's still the manual import step but, thankfully, the distance traversed is only a few sectors on your drive.
+
+
+## Installation
+
+Add this line to your application's Gemfile:
+
+    gem 'ynab_it'
+
+And then execute:
+
+    $ bundle
+
+Or install it yourself as:
+
+    $ gem install ynab_it
+
+## Usage
+
+TODO: Use often, use wisely.
+
+
