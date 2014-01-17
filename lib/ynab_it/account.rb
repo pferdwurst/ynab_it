@@ -1,42 +1,54 @@
 
 module YnabIt
-  class Account
-
+  class Account 
     # Defines a bank/institution account struct
 
-    attr_accessor :name, :id, :institution_id, :username, :password, :category, :customer_id, :account_id, :downloads_path
+    attr_accessor :name, :id, :institution_id, :institution, :username, :password, :category, :customer_id, :account_id, :downloads_path
+  
+   
+    
     class << self
-      def load(customer_id, hsh)
-
+      def load(customer_id, dir, hsh)
         # assume the argument is a hash
         a = Account.new
         # Fail if either of these are empty
         a.account_id = hsh[:account_id] || (raise ArgumentError, "Missing account_id")
         a.customer_id = customer_id || (raise ArgumentError, "Missing customer_id")
 
-        a.name = hsh[:name]
-        a.id = hsh[:id]
-        a.institution_id = hsh[:institution_id]
-        a.username = hsh[:username]
-        a.password = hsh[:password]
-        a.category = hsh[:category]
-        # downloads are read from elsewhere
+        a.name = hsh[:name] || "<name>"
+        a.id = hsh[:id] || "<id>"
+        a.institution_id = hsh[:institution_id] ||  (raise ArgumentError, "Missing institution_id")
+        a.username = hsh[:username] || "<username>"
+        a.password = hsh[:password] || "<password>"
+        a.category = hsh[:category] || "<category>"
+        a.downloads_path = dir
 
+        # Retrieve the institution information.  In the future this can be stored and normalized
+        begin
+          inst =  YnabIt.institutions.find { |i| i[:institution_id] ==  hsh[:institution_id] }
+          a.institution = Institution.load(inst)
+        rescue StandardError => e
+           puts "Failed to load institution data for id #{hsh[:institution_id]}: #{e}"
+         end
+         
         a
       end
     end
-
-   
+    
     def to_s()
-      puts "
-         Account 
-            name: #{name},
-           downloads_path: #{path}"       
+       "
+         Account
+            name:           #{name}
+            institution:    #{institution}
+            account_id:     #{account_id}
+            downloads_path: #{path}
+            download_history: #{downloader.show_history}
+         "
     end
 
     # Path to formatted/processed downloads
     def path
-      download_path = File.join TxDownloader.FORMATTED_DIR, customer_id, (account_id.nil? ? "account_id" : account_id)
+      download_path = File.join downloads_path, customer_id, (account_id.nil? ? "account_id" : account_id)
     end
 
     def downloader
@@ -46,4 +58,5 @@ module YnabIt
     end
 
   end
+  
 end

@@ -1,5 +1,6 @@
 require 'ostruct'
 require 'yaml'
+require 'pp'
 
 module YnabIt
   class Customer < YnabIt::Base
@@ -7,10 +8,14 @@ module YnabIt
     attr_accessor :customer_id, :accounts
     def initialize(c_id)
       super()
+    
       @customer_id  = c_id
       @client.instance_variable_set(:@customer_id, c_id)
       @accounts = []
 
+      # Load the accounts
+      load_account_list
+      
       @log.info("The client is initialized #{@client.inspect}")
     end
 
@@ -20,7 +25,7 @@ module YnabIt
     # so as to not have to repeatedly query the API
 
     def load_account_list
-      dname = File.join(TxDownloader.RAW_DIR)
+      dname = self.raw_dir
       fname = File.join(dname, "accounts.#{customer_id}")
 
       if !Dir.exist?(dname)
@@ -34,7 +39,7 @@ module YnabIt
         begin
           File.write(fname,  @client.accounts)
         rescue StandardError => e
-          log.error("Failed to fetch the account details from the api: #{e}")
+          @log.error("Failed to fetch the account details from the api: #{e}")
         end
       end
 
@@ -43,13 +48,12 @@ module YnabIt
       parse_account_list(data)
 
     rescue => e
-      log.error("Failed to load account list from #{fname}: #{e}")
-
+      @log.error("Failed to load account list from #{fname}: #{e}")
       end
 
     # Get accounts for customer_id from Intuit
     # Downloads the raw output to file
-    # All subsequent calls in the same day will load
+    # All subsequent calls in txhe same day will load
     # from the raw downloaded file (unless forced not to)
     def parse_account_list(raw_details)
 
@@ -64,19 +68,29 @@ module YnabIt
       l3 = OpenStruct.new l2.account_list
 
       l3.credit_account.each    do |l|
-        acct = Account.load(customer_id, l)
+        acct = Account.load(customer_id, formatted_dir, l)
         @accounts.push acct
       end
       # grab banking accounts
       l3.banking_account.each do |l|
-        acct = Account.load(customer_id, l)
+        acct = Account.load(customer_id, formatted_dir, l)
         @accounts.push acct
       end
       # And loan accounts
       l3.loan_account.each do |l|
-        @accounts.push Account.load(customer_id, l)
+        @accounts.push Account.load(customer_id,formatted_dir, l)
       end
+    end
+
+    def show_accounts
+       accounts.each do |a|
+        puts a
+        puts "-------------------------------"
+      end
+      #  PP.pp(accounts, $>,  maxwidth = 50)
+      
     end
   #----------------------
   end
+
 end
