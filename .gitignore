@@ -1,5 +1,6 @@
 conf/auth/
 conf/*conf
+conf/*yml
 downloads/raw/*
 downloads/formatted/*
 log/
