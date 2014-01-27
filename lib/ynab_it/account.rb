@@ -3,12 +3,12 @@ module YnabIt
   class Account 
     # Defines a bank/institution account struct
 
-    attr_accessor :name, :id, :institution_id, :institution, :username, :password, :category, :customer_id, :account_id, :downloads_path
+    attr_accessor :name, :id, :institution_id, :institution, :username, :password, :category, :customer_id, :account_id, :downloads_path, :raw_dir
   
    
     
     class << self
-      def load(customer_id, dir, hsh)
+      def load(customer_id, raw_dir, formatted_dir, hsh)
         # assume the argument is a hash
         a = Account.new
         # Fail if either of these are empty
@@ -21,7 +21,8 @@ module YnabIt
         a.username = hsh[:username] || "<username>"
         a.password = hsh[:password] || "<password>"
         a.category = hsh[:category] || "<category>"
-        a.downloads_path = dir
+        a.downloads_path = formatted_dir
+        a.raw_dir = raw_dir
 
         # Retrieve the institution information.  In the future this can be stored and normalized
         begin
@@ -36,14 +37,13 @@ module YnabIt
     end
     
     def to_s()
-       "
-         Account
-            name:           #{name}
-            institution:    #{institution}
-            account_id:     #{account_id}
-            downloads_path: #{path}
-            download_history: #{downloader.show_history}
-         "
+"Account
+   name:             #{name}
+   institution:      #{institution}
+   account_id:       #{account_id}
+   downloads_path:   #{path}
+   download_history: #{downloader.show_history}
+"
     end
 
     # Path to formatted/processed downloads
@@ -54,6 +54,7 @@ module YnabIt
     def downloader
       dwnl = TxDownloader.new customer_id,  account_id
       dwnl.download_path = path
+      dwnl.raw_path = raw_dir
       return dwnl
     end
 

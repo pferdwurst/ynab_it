@@ -49,7 +49,8 @@ module YnabIt
 
     rescue => e
       @log.error("Failed to load account list from #{fname}: #{e}")
-      end
+      raise
+    end
 
     # Get accounts for customer_id from Intuit
     # Downloads the raw output to file
@@ -68,27 +69,25 @@ module YnabIt
       l3 = OpenStruct.new l2.account_list
 
       l3.credit_account.each    do |l|
-        acct = Account.load(customer_id, formatted_dir, l)
+        acct = Account.load(customer_id, raw_dir, formatted_dir, l)
         @accounts.push acct
       end
       # grab banking accounts
       l3.banking_account.each do |l|
-        acct = Account.load(customer_id, formatted_dir, l)
+        acct = Account.load(customer_id, raw_dir, formatted_dir, l)
         @accounts.push acct
       end
       # And loan accounts
       l3.loan_account.each do |l|
-        @accounts.push Account.load(customer_id,formatted_dir, l)
+        @accounts.push Account.load(customer_id, raw_dir, formatted_dir, l)
       end
     end
 
     def show_accounts
-       accounts.each do |a|
-        puts a
-        puts "-------------------------------"
-      end
-      #  PP.pp(accounts, $>,  maxwidth = 50)
-      
+       #accounts.each do |a|
+        #puts "\n\n #{a} \n -----------------------"
+        PP.pp(accounts, $>,  maxwidth = 50)
+      #end
     end
   #----------------------
   end

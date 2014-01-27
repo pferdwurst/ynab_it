@@ -11,7 +11,6 @@ module YnabIt
     #
     #
     def initialize
-      puts "The base ancestors #{self.class.ancestors}"
       conf = YAML.load_file(CLIENT_CONF)
       client_conf = conf["client"]
       customer_conf = conf["customer"]

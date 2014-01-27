@@ -4,4 +4,8 @@
 require File.expand_path("../../lib/ynab_it", __FILE__)
 
 #--- FILL IN customer_id ---#
-c = YnabIt::Customer.new "customer_id"
+c = YnabIt::Customer.new "tmamed"
+c.show_accounts
+
+#YnabIt::Process.get(c)
+#YnabIt::Process.transform(c)

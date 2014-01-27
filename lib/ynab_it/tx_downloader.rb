@@ -23,7 +23,7 @@ downloads
 module YnabIt
   class TxDownloader
 
-    attr_accessor :customer_id, :account_id, :download_path
+    attr_accessor :customer_id, :account_id, :download_path, :raw_path
     def initialize(customer_id, account_id)
       super()
       self.customer_id = customer_id
@@ -38,7 +38,7 @@ module YnabIt
 
     # Generate a filename that includes the start date of the download
     def raw_filename(account_id, start_date, end_date)
-      dname = File.join(raw_dir, today)
+      dname = File.join(raw_path, today)
       if !Dir.exist?(dname)
         Dir.mkdir(dname)
       end
@@ -59,7 +59,7 @@ module YnabIt
       download_ranges.each do |r|
         start_date = r.first
         end_date = r.last
-        YnabIt.logger.info("Fetching transactions for dates #{start_date.strftime( "%b %d, %Y")} to #{end_date.strftime( "%b %d, %Y")}")
+        YnabIt.logger.info("[acct: #{account_id}]: Fetching transactions for dates #{start_date.strftime( "%b %d, %Y")} to #{end_date.strftime( "%b %d, %Y")}")
 
         old_stdout = $stdout.dup
 
