@@ -4,6 +4,9 @@ require 'pp'
 require 'aggcat'
 require 'yaml'
 require 'date'
+require 'rainbow'
+require 'formatador'
+
 
 # Logger
 require 'logger'
@@ -87,8 +90,13 @@ module YnabIt
   # Require YnabIt base files
   %w{
 base
+download_range
+
 account
 customer
+file_name
+download
+exceptions
 tx_downloader
 download_history
 version
