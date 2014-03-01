@@ -3,9 +3,74 @@
 
 require File.expand_path("../../lib/ynab_it", __FILE__)
 
-#--- FILL IN customer_id ---#
-c = YnabIt::Customer.new "tmamed"
-c.show_accounts
+require 'optparse'
 
-#YnabIt::Process.get(c)
-#YnabIt::Process.transform(c)
+
+
+
+#  Options parsing 
+
+options = {}
+customer_name = "joe"
+
+op = OptionParser.new do |opts|
+   
+  opts.banner = "Usage: #{$0} [options]"
+
+  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+    options[:verbose] = v
+  end
+  
+  opts.on("-c", "--customer", "Specify a customer to load") do |customer_name|
+    options[:customer] = customer_name
+  end
+  
+  # Load a new customer 
+  c = YnabIt::Customer.new customer_name
+
+  # Option to specify account number
+  acct_hsh = {}
+  acct_no = ARGV[1]
+  
+  if acct_no
+     puts "Using account no #{acct_no}"
+     acct_hsh[acct_no] = c.accounts[acct_no]
+  else
+     acct_hsh = c.accounts
+  end
+  
+  opts.on("-s", "--show", "Display account information") do |s|
+    options[:show] = s
+    c.show_accounts(acct_hsh)
+  end
+  
+  opts.on("-d", "--download", "Download transactions for all accounts") do |d|
+    options[:download] = d
+    YnabIt::Process.get(c, acct_hsh)
+  end
+
+ 
+  
+  opts.on("-t", "--transform", "Convert downloaded transactions to YNAB-readable format") do |t|
+    options[:transform] = t
+    YnabIt::Process.transform(c)
+  end
+ 
+  opts.on("-a", "--all", "Show account info/download/transform") do |a|
+    options[:all] = a
+    
+    c.show_accounts
+    YnabIt::Process.get(c, acct_hsh)
+    YnabIt::Process.transform(c)
+  end
+  
+end
+
+op.parse!
+
+if !options.key?(:customer)
+    puts "Missing required parameter:  -c <customer>"
+    puts op
+end
+
+
