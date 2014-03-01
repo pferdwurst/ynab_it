@@ -17,65 +17,77 @@ module YnabIt
     @log = YnabIt.logger
 
     class << self
+      include YnabIt::FileName
+      
       # traverse the directory
       def process_dir(user, raw_directory, formatted_dir)
 
         @log.debug("Processing directory #{raw_directory}")
 
-        if Dir.exist?(raw_directory)
-          Dir.entries(raw_directory).each do |download_date|
-            if (download_date =~ /^\./)
-            next
-            end
-            
-            date_dir = File.join(raw_directory, download_date)
-            
-            
-            if ( File.directory?(date_dir) )
-              @log.debug( "Directory <<#{download_date}>> +===============")
+        if !Dir.exist?(raw_directory)
+          @log.error("Cannot process dir #{raw_directory}...it does not exist!")
+        end
 
-              Dir.entries(date_dir).each do |dwnld|
-
-                unless ( ( dwnld =~ /.txs$/).nil? )
-                  @log.debug( "\tProcessing raw file #{dwnld}")
-
-                  begin
-                    output_file = csv_filename(user, formatted_dir, dwnld)
-
-                    @log.debug("Transforming to file #{output_file}")
-                    
-                    # Don't convert if the file's already been converted
-                    unless File.exist?(output_file)
-                      input = File.join(date_dir, dwnld)
-                      input_json = File.read(input)
-
-                      if (File.size(input) == 0)
-                        @log.error( "Zero bytes in raw file #{input}")
-                      next
-                      end
-
-                      txs = OpenStruct.new eval(input_json)
-
-                      nested_txs = txs.result[:transaction_list][:banking_transaction]  || txs.result[:transaction_list][:credit_card_transaction]  || txs.result[:transaction_list][:loan_transaction ]
-                      if nested_txs.nil?
-                        @log.error( "Could not extract transactions for this account: ")
-                      next
-                      end
-
-                      process_raw(nested_txs, output_file)
-                      @log.info("Written to #{output_file}")
-                    end
-                  rescue   => e
-                    @log.error("Could not parse the file #{dwnld}: #{e}")
-                  end
-
-                end
-              end
-
-            end
+        Dir.entries(raw_directory).each do |download_date|
+          if (download_date =~ /^\./)
+          next
           end
 
+          date_dir = File.join(raw_directory, download_date)
+
+          if ( File.directory?(date_dir) )
+            @log.debug( "Directory <<#{download_date}>> +===============")
+
+            Dir.entries(date_dir).each do |dwnld|
+
+            # Only process files with "txs" extension
+              unless ( ( dwnld =~ /.txs$/).nil? )
+                output_file = csv_filename(user, formatted_dir, dwnld)
+                if File.exist?(output_file)
+                  ## TODO: check the size of the processed file
+                  @log.debug("\t#{dwnld} already processed")
+                next
+                else
+                  @log.debug( "\tProcessing raw file #{dwnld}")
+                end
+
+                begin
+                  @log.debug("\tBeginning transformation of file #{output_file}")
+                  # Don't convert if the file's already been converted
+                  input = File.join(date_dir, dwnld)
+                  input_json = File.read(input)
+
+                  if (File.size(input) == 0)
+                    @log.error( "Zero bytes in raw file #{input}")
+                  next
+                  end
+
+                  txs = OpenStruct.new eval(input_json)
+
+                  nested_txs = txs.result[:transaction_list][:banking_transaction]  || txs.result[:transaction_list][:credit_card_transaction]  || txs.result[:transaction_list][:loan_transaction ]
+                  if nested_txs.nil?
+                    @log.error( "\tNo transactions for dates: #{display_dates(input)}")
+                    nested_txs = []
+                  end
+
+                  process_raw(nested_txs, output_file)
+                  @log.info("\tFinished transforming to #{output_file}")
+                rescue   => e
+                  @log.error("\tCould not parse the file #{dwnld}: #{e}")
+                  begin
+                    File.delete(output_file)
+                    File.rename(input, File.join(input, ".bad"))
+                  rescue => ee
+                    @log.error("Cannot remove bad TX downloads: #{ee}")
+                  end
+                end
+
+              end
+            end
+
+          end
         end
+
       end
 
       # Transform the downloaded transactions into
@@ -121,6 +133,8 @@ module YnabIt
         end
 
       end
+
+    
 
       # generate the processed file name
       def csv_filename(user, formatted_dir, raw_filename)

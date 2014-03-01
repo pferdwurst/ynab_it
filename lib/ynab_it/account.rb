@@ -1,12 +1,8 @@
-
 module YnabIt
-  class Account 
+  class Account
     # Defines a bank/institution account struct
 
-    attr_accessor :name, :id, :institution_id, :institution, :username, :password, :category, :customer_id, :account_id, :downloads_path, :raw_dir
-  
-   
-    
+    attr_accessor :id, :name, :account_id, :nickname, :institution_id, :institution, :username, :password, :category, :customer_id, :downloads_path, :raw_dir
     class << self
       def load(customer_id, raw_dir, formatted_dir, hsh)
         # assume the argument is a hash
@@ -15,8 +11,9 @@ module YnabIt
         a.account_id = hsh[:account_id] || (raise ArgumentError, "Missing account_id")
         a.customer_id = customer_id || (raise ArgumentError, "Missing customer_id")
 
-        a.name = hsh[:name] || "<name>"
         a.id = hsh[:id] || "<id>"
+        a.name = hsh[:name] || "<name>"
+        a.nickname = hsh[:account_nickname]
         a.institution_id = hsh[:institution_id] ||  (raise ArgumentError, "Missing institution_id")
         a.username = hsh[:username] || "<username>"
         a.password = hsh[:password] || "<password>"
@@ -29,21 +26,25 @@ module YnabIt
           inst =  YnabIt.institutions.find { |i| i[:institution_id] ==  hsh[:institution_id] }
           a.institution = Institution.load(inst)
         rescue StandardError => e
-           puts "Failed to load institution data for id #{hsh[:institution_id]}: #{e}"
-         end
-         
+          puts "Failed to load institution data for id #{hsh[:institution_id]}: #{e}"
+        end
+
         a
       end
     end
-    
-    def to_s()
-"Account
-   name:             #{name}
-   institution:      #{institution}
-   account_id:       #{account_id}
-   downloads_path:   #{path}
-   download_history: #{downloader.show_history}
-"
+
+    def show()
+      history = downloader.history
+      f = Rainbow.new
+      str = f.wrap("Account #{account_id}\n").bright.blue  +
+      "\t" + f.wrap("name:").yellow + "\t" + f.wrap("#{name}").green + "\n" +
+      "\t" + f.wrap("nickname:").yellow + "\t" + f.wrap("#{nickname}").green + "\n" +
+      "\t" + f.wrap("category:").yellow + "\t" + f.wrap("#{category}").green + "\n" +
+      "\t" + f.wrap("institution:").yellow + "\n" + institution.show(f) + "\n" +
+      "\t" + f.wrap("account_id:").yellow + "\t#{account_id} \n" +
+      "\t" + f.wrap("downloads_path:").yellow + "\t" + f.wrap("#{path}").underline + "\n" + history.info
+
+      print str
     end
 
     # Path to formatted/processed downloads
@@ -53,11 +54,11 @@ module YnabIt
 
     def downloader
       dwnl = TxDownloader.new customer_id,  account_id
-      dwnl.download_path = path
-      dwnl.raw_path = raw_dir
+      dwnl.formatted_base = path
+      dwnl.raw_base = raw_dir
       return dwnl
     end
 
   end
-  
+
 end

@@ -22,44 +22,28 @@ downloads
 
 module YnabIt
   class TxDownloader
+    include YnabIt::FileName
 
-    attr_accessor :customer_id, :account_id, :download_path, :raw_path
+    attr_accessor :customer_id, :account_id
     def initialize(customer_id, account_id)
       super()
       self.customer_id = customer_id
       self.account_id = account_id
     end
 
-  
-
-    def today
-      YnabIt.to_datestr(DateTime.now)
-    end
-
-    # Generate a filename that includes the start date of the download
-    def raw_filename(account_id, start_date, end_date)
-      dname = File.join(raw_path, today)
-      if !Dir.exist?(dname)
-        Dir.mkdir(dname)
-      end
-
-      fname = File.join(dname, "#{account_id}.#{start_date}.#{end_date}.txs")
-
-    end
-
-
     def fetch(client, start_date, end_date)
+      range = DownloadRange.new(start_date, end_date)
       
-      # construct a date range between the present and the last download date
-      # if no other range is given
+      YnabIt.logger.info("Downloading transactions for account #{account_id} in the range #{range} ")
       
-      history = DownloadHistory.new(account_id, download_path)
-      download_ranges = history.find_missing_ranges(start_date, end_date)
+      history = DownloadHistory.new(account_id, formatted_base)
+      download_ranges = history.find_missing_ranges2(range, history.downloads.to_enum)
 
+      
       download_ranges.each do |r|
         start_date = r.first
         end_date = r.last
-        YnabIt.logger.info("[acct: #{account_id}]: Fetching transactions for dates #{start_date.strftime( "%b %d, %Y")} to #{end_date.strftime( "%b %d, %Y")}")
+        YnabIt.logger.info("[acct: #{account_id}]::fetch:: Fetching transactions for dates #{start_date.strftime( "%b %d, %Y")} to #{end_date.strftime( "%b %d, %Y")}")
 
         old_stdout = $stdout.dup
 
@@ -67,47 +51,50 @@ module YnabIt
         $stdout.sync = true
         $stderr.reopen("error.log")
         # get account transactions
-        puts client.account_transactions(account_id, start_date, end_date)
-
+        result = client.account_transactions(account_id, start_date, end_date)
+        if result.nil?
+          YnabIt.logger.error("[acct: #{account_id}]::fetch:: No transactions returned for dates #{start_date.strftime( "%b %d, %Y")} to #{end_date.strftime( "%b %d, %Y")}")
+        else
+          puts result
+        end
         $stdout = old_stdout.dup
       end
     end
 
-    def show_history
-      history = DownloadHistory.new(account_id, self.download_path)
-      history.info
+    def history
+      DownloadHistory.new(account_id, formatted_base)
     end
 
-    # Fetch the transactions for the latest date range
-    def fetch_latest(the_client)
-
-      history = DownloadHistory.new self.download_path
-      latest = history.latest_download
-      if latest.nil?
-
-        # If the account has never been downloaded, go back 2 months
-        latest = DateTime.now - 2*31
-
-      end
-
-      diff = (DateTime.now - latest).to_i
-
-      # If last download was more than a day ago...
-      if ( diff  > 1 )
-
-        start_date=latest
-        end_date=DateTime.now
-
-        YnabIt.logger.info("Getting transactions for dates #{start_date.strftime( "%b %d, %Y")} -- #{end_date.strftime( "%b %d, %Y")}")
-
-        old_stdout = $stdout.dup
-
-        $stdout.reopen(raw_filename(account_id, YnabIt.to_datestr(start_date), YnabIt.to_datestr(end_date)), "w")
-        $stdout.sync = true
-        $stderr.reopen("error.log")
-
-      $stdout = old_stdout.dup
-      end
-    end
+  # # Fetch the transactions for the latest date range
+  # def fetch_latest(the_client)
+  #
+  # history = DownloadHistory.new formatted_base
+  # latest = history.latest_download
+  # if latest.nil?
+  #
+  # # If the account has never been downloaded, go back 2 months
+  # latest = DateTime.now - 2*31
+  #
+  # end
+  #
+  # diff = (DateTime.now - latest).to_i
+  #
+  # # If last download was more than a day ago...
+  # if ( diff  > 1 )
+  #
+  # start_date=latest
+  # end_date=DateTime.now
+  #
+  # YnabIt.logger.info("Getting transactions for dates #{start_date.strftime( "%b %d, %Y")} -- #{end_date.strftime( "%b %d, %Y")}")
+  #
+  # old_stdout = $stdout.dup
+  #
+  # $stdout.reopen(raw_filename(account_id, YnabIt.to_datestr(start_date), YnabIt.to_datestr(end_date)), "w")
+  # $stdout.sync = true
+  # $stderr.reopen("error.log")
+  #
+  # $stdout = old_stdout.dup
+  # end
+  # end
   end
 end

@@ -8,14 +8,14 @@ module YnabIt
     attr_accessor :customer_id, :accounts
     def initialize(c_id)
       super()
-    
+
       @customer_id  = c_id
       @client.instance_variable_set(:@customer_id, c_id)
-      @accounts = []
+      @accounts = {}
 
       # Load the accounts
       load_account_list
-      
+
       @log.info("The client is initialized #{@client.inspect}")
     end
 
@@ -50,7 +50,7 @@ module YnabIt
     rescue => e
       @log.error("Failed to load account list from #{fname}: #{e}")
       raise
-    end
+      end
 
     # Get accounts for customer_id from Intuit
     # Downloads the raw output to file
@@ -68,26 +68,26 @@ module YnabIt
       l2 = OpenStruct.new l1.result
       l3 = OpenStruct.new l2.account_list
 
-      l3.credit_account.each    do |l|
-        acct = Account.load(customer_id, raw_dir, formatted_dir, l)
-        @accounts.push acct
+      @ACCT_TYPES = [ :credit_account, :banking_account, :loan_account]
+
+      @ACCT_TYPES.each do |at|
+        account_type = eval("l3." + at.to_s)
+        unless account_type.nil?
+          account_type.each do |l|
+            acct_hash = l.merge({:category => at.to_s})
+            acct = Account.load(customer_id, raw_dir, formatted_dir, acct_hash)
+            @accounts[acct.account_id] =  acct
+          end
+        end
       end
-      # grab banking accounts
-      l3.banking_account.each do |l|
-        acct = Account.load(customer_id, raw_dir, formatted_dir, l)
-        @accounts.push acct
-      end
-      # And loan accounts
-      l3.loan_account.each do |l|
-        @accounts.push Account.load(customer_id, raw_dir, formatted_dir, l)
-      end
+     
     end
 
-    def show_accounts
-       #accounts.each do |a|
-        #puts "\n\n #{a} \n -----------------------"
-        PP.pp(accounts, $>,  maxwidth = 50)
-      #end
+    def show_accounts(acct_hsh = accounts)
+      #PP.pp(accounts, $>,  maxwidth = 50)
+      acct_hsh.values.each do |a|
+        a.show
+      end
     end
   #----------------------
   end

@@ -18,11 +18,17 @@ module YnabIt
     end
 
     def to_s()
+       "\n\t\tname:           #{name}
+        \tinstitution_id: #{id}
+        \turl:            #{home_url}
        "
-                  name:           #{name},
-                  institution_id: #{id},
-                  url:            #{home_url}
-         "
+    end
+    
+    def show(formatter)
+      "\t\tname:\t" + formatter.wrap("#{name}").black + "\n" +
+      "\t\tinstitution_id:\t" + formatter.wrap("#{id}").black + "\n" +
+      "\t\tURL:\t" + formatter.wrap("#{home_url}").black + "\n"
+      
     end
 
   end
