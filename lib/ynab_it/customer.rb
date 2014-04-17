@@ -80,14 +80,17 @@ module YnabIt
           end
         end
       end
-     
+
     end
 
-    def show_accounts(acct_hsh = accounts)
-      #PP.pp(accounts, $>,  maxwidth = 50)
+    def show_accounts(acct_hsh)
+      if acct_hsh.nil?
+        acct_hsh = accounts
+      end
       acct_hsh.values.each do |a|
         a.show
       end
+
     end
   #----------------------
   end

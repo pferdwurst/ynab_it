@@ -2,75 +2,94 @@
 # encoding: utf-8
 
 require File.expand_path("../../lib/ynab_it", __FILE__)
-
 require 'optparse'
+require 'ostruct'
 
+#  Options parsing
 
+options = OpenStruct.new
 
-
-#  Options parsing 
-
-options = {}
-customer_name = "joe"
-
+# initialize
+ options.customer = false
+ options.account_no = false
+ 
+ 
 op = OptionParser.new do |opts|
-   
+
   opts.banner = "Usage: #{$0} [options]"
 
-  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-    options[:verbose] = v
+  # Mandatory options (ha ha)
+  opts.on("-c", "--customer NAME", "Specify a customer to load") do |customer_name|
+    options.customer = customer_name
   end
-  
-  opts.on("-c", "--customer", "Specify a customer to load") do |customer_name|
-    options[:customer] = customer_name
-  end
-  
-  # Load a new customer 
-  c = YnabIt::Customer.new customer_name
 
-  # Option to specify account number
-  acct_hsh = {}
-  acct_no = ARGV[1]
-  
-  if acct_no
-     puts "Using account no #{acct_no}"
-     acct_hsh[acct_no] = c.accounts[acct_no]
-  else
-     acct_hsh = c.accounts
+  # Load a new customer
+  #puts "cutomer is #{options.customer}"
+  #c = YnabIt::Customer.new options.customer
+
+  #OptionParser::MissingArgument
+
+  # Option to specify account number, defaults to all accounts
+  opts.on("-n", "--account ACCT_NO", "Specify an account number") do |num|
+    options.account_no = num
   end
-  
+
+
   opts.on("-s", "--show", "Display account information") do |s|
-    options[:show] = s
-    c.show_accounts(acct_hsh)
-  end
-  
-  opts.on("-d", "--download", "Download transactions for all accounts") do |d|
-    options[:download] = d
-    YnabIt::Process.get(c, acct_hsh)
-  end
-
- 
-  
-  opts.on("-t", "--transform", "Convert downloaded transactions to YNAB-readable format") do |t|
-    options[:transform] = t
-    YnabIt::Process.transform(c)
-  end
- 
-  opts.on("-a", "--all", "Show account info/download/transform") do |a|
-    options[:all] = a
+    options.show = s
     
-    c.show_accounts
-    YnabIt::Process.get(c, acct_hsh)
+    c = YnabIt::Customer.new options.customer
+    if options.account_no
+      acct_hsh = {}
+      acct_hsh[options.account_no] = c.accounts[options.account_no]
+      c.show_accounts(acct_hsh)
+    else
+      c.show_accounts(nil)
+    end
+  end
+
+  opts.on("-d", "--download", "Download transactions for all accounts") do |d|
+    options.download = d
+    
+    c = YnabIt::Customer.new options.customer
+    if options.account_no
+        acct_hsh = {}
+      acct_hsh[options.account_no] = c.accounts[options.account_no]
+     
+      YnabIt::Process.get(c, acct_hsh)
+    else
+      YnabIt::Process.get(c)
+    end
+  end
+
+  opts.on("-t", "--transform", "Convert downloaded transactions to YNAB-readable format") do |t|
+    options.transform = t
+    
+    c = YnabIt::Customer.new options.customer
     YnabIt::Process.transform(c)
   end
-  
+
+  opts.on("-a", "--all", "Show account info/download/transform") do |a|
+    options.all = a
+
+    c = YnabIt::Customer.new options.customer
+    c.show_accounts
+ 
+    YnabIt::Process.get(c)
+    YnabIt::Process.transform(c)
+  end
+
+  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+    options.verbose = v
+  end
+
 end
 
-op.parse!
+op.parse!(ARGV)
 
-if !options.key?(:customer)
-    puts "Missing required parameter:  -c <customer>"
-    puts op
-end
+pp options
 
-
+#if options.customer.nil?
+#    puts "Missing required parameter:  -c <customer>"
+#    puts op
+#  end
